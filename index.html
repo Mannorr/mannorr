@@ -565,7 +565,14 @@ form{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin-top:32px}
     fd.append('form', formKey); fd.append('page', location.hash||'#home'); fd.append('t', String(Date.now()-openedAt));
     if(DB_ENDPOINT){
       return fetch(DB_ENDPOINT,{method:'POST',body:fd}).then(function(r){return r.json();})
-        .catch(function(){ return fetch(DB_ENDPOINT,{method:'POST',body:fd,mode:'no-cors'}).then(function(){return {ok:true,ref:''};}); });
+        .catch(function(){
+          /* response unreadable: send blind to the sheet and keep a copy in Formspree so nothing is lost */
+          var copy=new FormData(); fd.forEach(function(v,k){copy.append(k,v);}); copy.append('_subject','mannorr.com · '+formKey+' (backup)');
+          return Promise.allSettled([
+            fetch(DB_ENDPOINT,{method:'POST',body:fd,mode:'no-cors'}),
+            fetch(FALLBACK,{method:'POST',body:copy,headers:{'Accept':'application/json'}})
+          ]).then(function(){return {ok:true,ref:''};});
+        });
     }
     fd.append('_subject','mannorr.com · '+formKey);
     return fetch(FALLBACK,{method:'POST',body:fd,headers:{'Accept':'application/json'}}).then(function(r){return {ok:r.ok};});
