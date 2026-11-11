@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MANNORR — Content Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--fg:#e8e4df;--accent:#c8ff00;--muted:#5a5651;--card:#111;--border:rgba(255,255,255,0.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);font-family:'DM Mono',monospace;font-weight:300;min-height:100vh;overflow-x:hidden}
+/* LOCK */
+#lockScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2rem}
+.lock-logo{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fg)}
+.lock-logo b{display:inline-block;width:9px;height:9px;background:var(--accent);border-radius:50%;margin-left:3px;vertical-align:middle}
+.lock-sub{font-size:.58rem;text-transform:uppercase;letter-spacing:.32em;color:var(--muted)}
+.lock-form{display:flex;flex-direction:column;gap:.7rem;width:260px}
+.lock-input{background:var(--card);border:1px solid var(--border);color:var(--fg);font-family:'DM Mono',monospace;font-size:.82rem;padding:.85rem 1.1rem;outline:none;transition:border-color .3s;letter-spacing:.1em}
+.lock-input:focus{border-color:var(--accent)}
+.lock-btn{background:var(--accent);color:#0a0a0a;border:none;font-family:'DM Mono',monospace;font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.22em;padding:.88rem;cursor:pointer}
+.lock-err{font-size:.62rem;color:#ff5555;text-align:center;letter-spacing:.1em;display:none}
+/* GRAIN */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:8000;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.028}
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:.9rem 3vw;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;letter-spacing:.07em;text-transform:uppercase;color:var(--fg)}
+.nav-logo b{display:inline-block;width:7px;height:7px;background:var(--accent);border-radius:50%;margin-left:3px;vertical-align:middle}
+.nav-right{display:flex;align-items:center;gap:1.2rem}
+.nav-tag{font-size:.55rem;text-transform:uppercase;letter-spacing:.25em;color:var(--accent);border:1px solid rgba(200,255,0,.28);padding:.22rem .65rem}
+.nav-count{font-size:.58rem;color:var(--muted)}
+/* CONTROLS */
+.controls{padding:1.2rem 3vw;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:.9rem;align-items:flex-end}
+.ctrl-group{display:flex;flex-direction:column;gap:.35rem}
+.ctrl-label{font-size:.48rem;text-transform:uppercase;letter-spacing:.25em;color:var(--accent)}
+.ctrl-pills{display:flex;gap:.3rem;flex-wrap:wrap}
+.pill{font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;padding:.28rem .78rem;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:none;transition:all .2s}
+.pill:hover{border-color:rgba(255,255,255,.3);color:var(--fg)}
+.pill.active{border-color:var(--accent);color:var(--accent);background:rgba(200,255,0,.05)}
+.search-wrap{margin-left:auto}
+.search-input{background:var(--card);border:1px solid var(--border);color:var(--fg);font-family:'DM Mono',monospace;font-size:.7rem;padding:.48rem .95rem;outline:none;width:190px;transition:border-color .3s}
+.search-input:focus{border-color:var(--accent)}
+/* GRID */
+.grid-wrap{padding:1.8rem 3vw}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.85rem}
+.post-card{background:var(--card);border:1px solid var(--border);cursor:pointer;transition:border-color .22s,transform .22s;overflow:hidden}
+.post-card:hover{border-color:rgba(200,255,0,.35);transform:translateY(-2px)}
+.post-thumb{width:100%;overflow:hidden;position:relative}
+.post-card-info{padding:.65rem .9rem;border-top:1px solid var(--border)}
+.post-card-date{font-size:.5rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:.18rem}
+.post-card-topic{font-size:.68rem;color:var(--fg);line-height:1.35;margin-bottom:.35rem;font-weight:400}
+.post-card-meta{display:flex;gap:.28rem;flex-wrap:wrap}
+.pct{font-size:.48rem;text-transform:uppercase;letter-spacing:.1em;padding:.18rem .45rem;border:1px solid var(--border);color:var(--muted)}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:5000;display:none;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal-inner{display:flex;gap:1.8rem;align-items:flex-start;max-width:960px;width:100%;margin:auto}
+.modal-preview-wrap{flex-shrink:0;position:relative}
+.modal-canvas-container{width:340px;border-radius:18px;overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.9)}
+.modal-close{position:absolute;top:-2.4rem;right:0;background:none;border:1px solid var(--border);color:var(--fg);font-family:'DM Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.14em;padding:.38rem .85rem;cursor:pointer;transition:border-color .2s}
+.modal-close:hover{border-color:var(--accent)}
+.modal-side{flex:1;display:flex;flex-direction:column;gap:.9rem;min-width:0}
+.modal-date{font-size:.52rem;text-transform:uppercase;letter-spacing:.24em;color:var(--accent)}
+.modal-topic{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;letter-spacing:-.02em;line-height:1.25;color:var(--fg)}
+.modal-pillar{font-size:.58rem;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+.modal-section-label{font-size:.5rem;text-transform:uppercase;letter-spacing:.24em;color:var(--accent);margin-bottom:.38rem}
+.modal-caption{background:#0a0a0a;border:1px solid var(--border);padding:.85rem .95rem;font-size:.68rem;line-height:1.85;color:var(--fg);max-height:110px;overflow-y:auto}
+.theme-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.35rem}
+.theme-btn{aspect-ratio:1;border:2px solid transparent;cursor:pointer;border-radius:5px;transition:border-color .18s;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.theme-btn.active{border-color:var(--accent)}
+.theme-btn span{font-family:'DM Mono',monospace;font-size:.38rem;text-transform:uppercase;letter-spacing:.05em;font-weight:500;text-align:center;line-height:1.2;padding:2px}
+.modal-dl-btn{background:var(--accent);color:#0a0a0a;border:none;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.17em;padding:.95rem;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:opacity .2s}
+.modal-dl-btn:hover{opacity:.87}
+.modal-dl-btn:disabled{opacity:.38;cursor:not-allowed}
+.modal-nav{display:flex;gap:.4rem}
+.modal-nav-btn{flex:1;background:none;border:1px solid var(--border);color:var(--fg);font-family:'DM Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;padding:.58rem;cursor:pointer;transition:border-color .2s}
+.modal-nav-btn:hover{border-color:var(--accent)}
+@media(max-width:720px){.modal-inner{flex-direction:column;align-items:center}.modal-canvas-container{width:100%;max-width:300px}.modal-side{width:100%}}
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-logo">MANNORR<b></b></div>
+  <div class="lock-sub">Content Studio &mdash; Private Access</div>
+  <div class="lock-form">
+    <input class="lock-input" type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
+    <button class="lock-btn" onclick="unlock()">Enter Studio &rarr;</button>
+    <div class="lock-err" id="lockErr">Incorrect password</div>
+  </div>
+</div>
+
+<div id="studio" style="display:none">
+<nav>
+  <div class="nav-logo">MANNORR<b></b></div>
+  <div class="nav-right">
+    <div class="nav-tag">Content Studio</div>
+    <div class="nav-count" id="navCount">57 posts</div>
+  </div>
+</nav>
+<div class="controls">
+  <div class="ctrl-group">
+    <div class="ctrl-label">Pillar</div>
+    <div class="ctrl-pills" id="pillarFilters">
+      <button class="pill active" data-f="all">All</button>
+      <button class="pill" data-f="TIP">Design Tip</button>
+      <button class="pill" data-f="ADVICE">Brand Advice</button>
+      <button class="pill" data-f="SPOTLIGHT">Portfolio</button>
+      <button class="pill" data-f="PROCESS">Process</button>
+      <button class="pill" data-f="QUOTE">Quote</button>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Month</div>
+    <div class="ctrl-pills" id="monthFilters">
+      <button class="pill active" data-m="all">All</button>
+      <button class="pill" data-m="Apr">April</button>
+      <button class="pill" data-m="May">May</button>
+    </div>
+  </div>
+  <div class="ctrl-group search-wrap">
+    <div class="ctrl-label">Search</div>
+    <input class="search-input" type="text" id="searchInput" placeholder="Search topics...">
+  </div>
+</div>
+<div class="grid-wrap"><div class="grid" id="postGrid"></div></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-inner">
+    <div class="modal-preview-wrap">
+      <button class="modal-close" onclick="closeModal()">&times; Close</button>
+      <div class="modal-canvas-container" id="previewContainer"></div>
+    </div>
+    <div class="modal-side">
+      <div>
+        <div class="modal-date" id="mDate"></div>
+        <div class="modal-topic" id="mTopic"></div>
+        <div class="modal-pillar" id="mPillar"></div>
+      </div>
+      <div>
+        <div class="modal-section-label">Caption &amp; Hashtags</div>
+        <div class="modal-caption" id="mCaption"></div>
+      </div>
+      <div>
+        <div class="modal-section-label">Theme &mdash; click to switch</div>
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+      <button class="modal-dl-btn" id="dlBtn" onclick="downloadPost()">&darr; Download 1080 &times; 1350 JPEG</button>
+      <div class="modal-nav">
+        <button class="modal-nav-btn" onclick="navPost(-1)">&larr; Prev</button>
+        <button class="modal-nav-btn" onclick="navPost(1)">Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PASS='Jesusislord1!';
+function unlock(){
+  if(document.getElementById('pwInput').value===PASS){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('studio').style.display='block';
+    renderGrid();
+  }else{
+    document.getElementById('lockErr').style.display='block';
+    document.getElementById('pwInput').value='';
+  }
+}
+
+// POSTS: [date, day, type, headline, subheadline, cta, points[], caption]
+var POSTS=[
+["Apr 05","Sun","TIP","Your layout is losing clients","Before they read a word, they've already judged your brand.","Need a brand system that holds? DM me.",["First impressions happen in 0.05 seconds","A cluttered layout signals unclear thinking","Visual hierarchy = business credibility"],"Most brands lose trust before anyone reads a word. Your layout is your first pitch. Make it count. DM to build a brand system that converts. #BrandDesign #MANNORR #VisualDesign"],
+["Apr 06","Mon","ADVICE","You don't need a logo. You need a system.","A logo is one mark. A brand system is every touchpoint, working together.","Ready to build yours? DM me.",["Logo = one mark. System = every touchpoint","A system creates consistency at scale","Consistency builds trust. Trust builds revenue"],"The logo is the smallest part. The system is everything. If you only have a logo, you only have a starting point. Let's build the full thing. DM me. #BrandIdentity #MANNORR #BrandStrategy"],
+["Apr 07","Tue","SPOTLIGHT","100+ assets. 30% faster delivery.","Financefair came to me mid-rebrand. I built systems that scaled.","This is what strategic design looks like. DM to start yours.",["Joined a company-wide visual rebrand","Built reusable layout systems from day one","100+ branded assets, 30% faster turnaround"],"Not just a designer on the brief. A systems thinker who made the whole team faster. That's the difference between design and strategic design. DM me. #PortfolioSpotlight #MANNORR #BrandDesign"],
+["Apr 08","Wed","TIP","3 type weights. That's the rule.","More than three and your layout has no hierarchy. Less than two and it has no life.","Want typography that works? DM me.",["Display: one bold weight for headlines","Body: readable, light, generous spacing","Caption: small, muted, always supporting"],"Typography is the most powerful design decision you make. Get it wrong and nothing else saves you. Get it right and the layout designs itself. #Typography #DesignTips #MANNORR"],
+["Apr 09","Thu","ADVICE","Your brand has one job before you speak.","It has to make people feel something before they read a single word.","Need a brand that leads before it speaks? DM me.",["Colour communicates before copy does","Font choice signals your brand personality","Every visual decision is a brand statement"],"Before your audience reads your tagline, they've already made a decision about you. Your visuals either build trust or break it. DM me. #BrandStrategy #MANNORR"],
+["Apr 10","Fri","PROCESS","How I build a brand from zero.","Every project. Every time. No shortcuts.","Want this process working for your brand? DM me.",["01 BRIEF: understand the real problem","02 MOODBOARD: lock the visual direction","03 SYSTEM: build what scales","04 DELIVER: assets that actually work"],"Process is not about being slow. It is about not redoing everything twice. This is how I deliver brands that hold together. DM me. #BehindTheWork #MANNORR #DesignProcess"],
+["Apr 11","Sat","QUOTE","Not just visual. Strategic.","Design without strategy is decoration. Strategy without design is invisible.","Let's build something that does both. DM me.",[],"The work needs to earn its place. Not just on the page, but in the market. #BrandStrategy #MANNORR #DesignThinking"],
+["Apr 12","Sun","TIP","White space is your most powerful tool.","The brands that breathe are the brands that lead.","Want a layout that commands attention? DM me.",["Space creates visual weight and priority","Crowding signals lack of confidence","Breathing room = premium positioning"],"Most brands try to fill every pixel. The best brands know what to leave out. Less is not less. It's more intentional. #DesignTips #MANNORR #MinimalistDesign"],
+["Apr 13","Mon","ADVICE","Your colour palette is a conversion tool.","It's the first decision your audience makes about you. And they make it unconsciously.","Need a palette that works strategically? DM me.",["Warm tones signal energy and confidence","Cool tones signal trust and precision","One accent colour = instant brand recognition"],"Colour is never just aesthetic. It's psychological. The brands that understand this charge more, convert better, and stay remembered longer. DM me. #BrandDesign #ColorStrategy #MANNORR"],
+["Apr 14","Tue","SPOTLIGHT","350+ assets. One visual language.","Celebration Church International needed a system that scaled globally.","Need a brand that scales? DM me.",["Led visual direction for 30+ sermon series","350+ assets delivered every single year","Mentored a team of 4 to 6 designers"],"Scale only works when there's a system underneath it. Without one, you're recreating from scratch every time. DM me. #PortfolioSpotlight #MANNORR #CreativeDirection"],
+["Apr 15","Wed","TIP","The grid is invisible. The mess isn't.","Structure creates freedom. A 12-column grid gives you both.","Want layouts that feel effortless? DM me.",["Grids create invisible order and alignment","Consistent gutters signal professional craft","Break the grid once, with full intention"],"Good layout design is felt, not noticed. Bad layout design is noticed immediately. Build the grid first. Then design within it. #DesignTips #Layout #MANNORR"],
+["Apr 16","Thu","ADVICE","A bad brief costs more than a bad logo.","The brief is where the project succeeds or fails, before a pixel is placed.","Need a design partner who gets the brief right? DM me.",["State the problem, not the solution","Define your audience with real specificity","One page. Always. No exceptions"],"Vague briefs produce vague work. The most expensive thing in any project is going back to the beginning. DM me. #CreativeDirection #MANNORR"],
+["Apr 17","Fri","PROCESS","The stage most designers skip.","The moodboard. It feels slow. It saves everything.","Want a process that protects your investment? DM me.",["01 BRIEF: define the real objective","02 MOODBOARD: this is where direction lives","03 SYSTEM: now we build with confidence","04 DELIVER: on time, on brand"],"Clients who rush the moodboard stage revise the most. This is not a nice-to-have. It is the project. DM me. #BehindTheWork #MANNORR #DesignProcess"],
+["Apr 18","Sat","QUOTE","Designed with intention.","Every decision: the typeface, the weight, the spacing. All deliberate.","Work with someone who designs on purpose. DM me.",[],"There's no such thing as a small design decision. Every element either earns its place or it doesn't. #DesignPhilosophy #MANNORR"],
+["Apr 19","Sun","TIP","The font you choose says more than the words.","Typeface communicates personality before the copy lands.","Need a brand voice that shows before it speaks? DM me.",["Serif = trust, heritage, authority","Sans-serif = clarity, modernity, approachability","Display = personality, difference, boldness"],"The wrong typeface undermines everything. The right one does half the persuasion before you've written a word. #Typography #BrandIdentity #MANNORR"],
+["Apr 20","Mon","ADVICE","The difference between a good brand and a great one.","It's not the logo. It's the thinking behind every single decision.","Ready to invest in the full thing? DM me.",["Essential: logo, basic palette, focused scope","Professional: strategy, full identity, guidelines","Enterprise: full discovery, retainer, event systems"],"A brand that works for 5 years is always worth more than a logo that needs replacing in 12 months. DM me. #BrandStrategy #MANNORR #FreelanceTips"],
+["Apr 21","Tue","SPOTLIGHT","70+ brand assets. 25% fewer revision rounds.","KOG Nigeria Ltd needed a clearer system, not just more designs.","Want fewer revisions and better output? DM me.",["Contributed to a structured brand refresh","70+ brand assets designed and delivered","25% fewer revisions through clearer systems"],"Fewer revisions is not luck. It's the result of a clear system, a thorough brief, and asking the right questions first. DM me. #PortfolioSpotlight #BrandDesign #MANNORR"],
+["Apr 22","Wed","TIP","Contrast is how the eye knows where to go.","Remove it and you remove direction.","Need a brand with visual authority? DM me.",["Size contrast creates clear hierarchy","Colour contrast draws attention deliberately","Weight contrast defines the reading order"],"Without contrast, everything has the same importance. Which means nothing has importance. Design contrast = business clarity. #DesignTips #MANNORR #VisualDesign"],
+["Apr 23","Thu","ADVICE","The intake form that saves thousands in revisions.","What you capture before the project starts determines everything after.","Want a process that protects everyone? DM me.",["Goals, audience, tone: captured before day one","References gathered before any sketching","Every decision in writing, not verbal"],"The most expensive design projects are the ones with no brief. I know exactly what we're solving before I open Figma. DM me. #FreelanceDesign #MANNORR #ClientWork"],
+["Apr 24","Fri","PROCESS","One concept. Every format.","A campaign is not a poster. It's a visual ecosystem.","Need a campaign that works everywhere? DM me.",["01 BRIEF: one clear campaign objective","02 KEY VISUAL: one strong hero concept","03 ADAPT: landscape, square, story, banner","04 DELIVER: print-ready and social-ready"],"The brands that look consistent everywhere had one strong concept and a system to adapt it. DM me. #BehindTheWork #CampaignDesign #MANNORR"],
+["Apr 25","Sat","QUOTE","Crafting visual systems that resonate.","Not just making things look good. Making things that hold together.","Let's build yours. DM me.",[],"A brand that holds together across every touchpoint builds trust automatically. That's the work. #VisualDesign #BrandSystems #MANNORR"],
+["Apr 26","Sun","TIP","Dark mode isn't a trend. It's a design decision.","And it requires a completely different approach to everything.","Need a brand built for modern platforms? DM me.",["Near-black over pure black. Always warmer.","Warm off-whites, never pure white on dark","One accent colour, used with real restraint"],"If your brand only works on white backgrounds, your brand has a problem. Platform-ready design is part of the brief now. #DesignTips #DarkMode #MANNORR"],
+["Apr 27","Mon","ADVICE","Global clients need global pricing.","Multi-currency pricing removes friction. Friction kills conversions.","Want a setup that works internationally? DM me.",["EUR as base, USD and GBP adaptive","Pricing in the client's currency signals trust","Remove conversion friction, close faster"],"The moment a client has to calculate what your price means in their currency, you've introduced doubt. Remove it. DM me. #FreelanceTips #MANNORR #DesignBusiness"],
+["Apr 28","Tue","SPOTLIGHT","One message. Read at 60mph.","Billboard design is the clearest proof that constraints create better creative.","Need design that communicates instantly? DM me.",["Large format: one message, no fine print","One hero visual. Nothing competes with it.","If it doesn't read instantly, it doesn't work"],"Large format teaches you the most important lesson in design: say one thing clearly, or say nothing at all. DM me. #PortfolioSpotlight #PrintDesign #MANNORR"],
+["Apr 29","Wed","TIP","Five principles. Every great design uses them.","Gestalt is not theory. It's the science of why your design works.","Want strategy behind every decision? DM me.",["Proximity: group what belongs together","Similarity: repeat to create rhythm","Continuity: guide the eye with invisible lines"],"Design that looks effortless has the most rigorous thinking behind it. Gestalt is the framework. #DesignTips #DesignThinking #MANNORR"],
+["Apr 30","Thu","ADVICE","Three tiers. The middle one converts every time.","Price anchoring is not manipulation. It's clarity.","Ready to price confidently? DM me.",["Essential: entry level, focused scope","Professional: where serious brands are built","Enterprise: long-term creative partnership"],"When clients see three options, the middle becomes the obvious choice. The top makes the middle feel like great value. DM me. #FreelanceTips #BrandStrategy #MANNORR"],
+["May 01","Fri","PROCESS","30 sermon series. One visual language.","Celebration Church needed a system that could flex every theme without losing the brand.","Need a brand flexible enough to scale? DM me.",["01 BRIEF: new theme, same brand foundation","02 MOODBOARD: new palette and type direction","03 SYSTEM: consistent grid and asset logic","04 DELIVER: 350+ assets, year after year"],"The system is what makes the creativity possible. Without structure, every project starts from zero. DM me. #BehindTheWork #MANNORR #CreativeDirection"],
+["May 02","Sat","QUOTE","Every element earns its place on the page.","If you can't explain why it's there, it shouldn't be.","Work with a designer who designs with purpose. DM me.",[],"Minimalism isn't about having less. It's about everything that remains being exactly right. #DesignPhilosophy #MANNORR #MinimalistDesign"],
+["May 03","Sun","TIP","Logo animation is brand behaviour.","It's not a nice-to-have. It's how your brand acts when it moves.","Need a brand identity built for motion? DM me.",["Under 2 seconds. Always, no exceptions.","Must communicate personality silently","Ease in, hold, ease out. Not a bounce."],"Static brands are increasingly invisible. Motion is the next layer of brand identity. Build it in from the start. #MotionDesign #LogoDesign #MANNORR"],
+["May 04","Mon","ADVICE","A retainer is a relationship with structure.","It's how you get consistent, high-quality design without starting over every month.","Want ongoing design support? DM me.",["Scoped by deliverable count, not open hours","Monthly brand check-in keeps direction aligned","30-day exit clause protects both sides"],"The best creative work happens inside an ongoing relationship. I already know your brand, your audience, and your goals. DM me. #FreelanceTips #MANNORR #DesignBusiness"],
+["May 05","Tue","SPOTLIGHT","One design language. Every room, every culture.","Celebration Church International operates globally. Every series needed to feel cohesive everywhere.","Need a brand that works across cultures? DM me.",["Visual direction for a global ministry brand","30+ unique series, one visual system","Audience: every age, every background, everywhere"],"Designing for a global audience means building a system with enough structure to stay consistent. DM me. #PortfolioSpotlight #MANNORR #GlobalDesign"],
+["May 06","Wed","TIP","Five rules. Every editorial layout I build.","Clean layouts are never accidental. They follow logic.","Need a layout system that scales? DM me.",["One strong entry point: always, every time","Column logic first, then asset placement","Break the grid once, with full intention"],"The best layouts look like they couldn't have been designed any other way. That's the goal. #EditorialDesign #DesignTips #MANNORR"],
+["May 07","Thu","ADVICE","Never ask a client if they like it.","That's the wrong question. The right one: does this solve the problem?","Need a design partner who leads the conversation? DM me.",["Lead every presentation with the rationale","Show how the design solves the stated problem","Feedback is strategic, not personal preference"],"The moment you ask 'do you like it?' you've made the decision subjective. Design is not about taste. It's about what works. DM me. #ClientWork #MANNORR #BrandDesign"],
+["May 08","Fri","PROCESS","Dublin to Lagos to London. Same brand. Different markets.","Designing across cultures means building systems with intentional flexibility.","Need design that travels? DM me.",["01 BRIEF: understand each market's context","02 MOODBOARD: reference local and global","03 SYSTEM: flexible enough to localise","04 DELIVER: consistent across every market"],"Colour means different things in different markets. So does typography, imagery, and hierarchy. Research before designing. DM me. #BehindTheWork #MANNORR #GlobalDesign"],
+["May 09","Sat","QUOTE","I turn abstract ideas into strategic visual solutions.","That's the work. Brief in. Brand system out.","Ready to start? DM me.",[],"Every project begins with an idea. My job is to give it form, clarity, and a system that scales. #VisualDesign #BrandStrategy #MANNORR"],
+["May 10","Sun","TIP","The typeface you pick is a brand decision.","Not a design preference. A strategic choice.","Need brand typography that works? DM me.",["Serif: communicates trust, heritage, authority","Sans-serif: signals clarity and modernity","Display: expresses personality and differentiation"],"Choose your typeface like you choose a brand positioning. Because for your audience, they're the same thing. #Typography #BrandIdentity #MANNORR"],
+["May 11","Mon","ADVICE","Brand guidelines aren't bureaucracy. They're protection.","They protect your investment every time someone creates in your name.","Need a brand guide that actually gets used? DM me.",["Logo rules and clear space: non-negotiable","Full colour system with primary and secondary use","Voice and tone with real examples, not theory"],"Every time someone makes a design decision without guidelines, your brand loses consistency. Consistency is how brands build trust. DM me. #BrandGuidelines #MANNORR"],
+["May 12","Tue","SPOTLIGHT","Every screen is a brand touchpoint.","UI/UX requires the same strategic thinking as brand identity. Just with different constraints.","Need a digital brand that holds up everywhere? DM me.",["Visual design meets product thinking","Consistency comes from a documented system","Every state, every component, on brand"],"The brands that look great on a website and great on an app didn't get lucky. They had a design system. DM me. #UIUX #PortfolioSpotlight #MANNORR"],
+["May 13","Wed","TIP","Rhythm is what makes a layout feel alive.","Controlled repetition of size, spacing, and weight.","Need a layout with real visual energy? DM me.",["Repeat elements to create visual rhythm","Vary scale to create interest within structure","One accent break per composition. No more."],"Layouts without rhythm feel flat. Layouts with too much variation feel chaotic. Intentional repetition with one deliberate break. #DesignTips #MANNORR #VisualDesign"],
+["May 14","Thu","ADVICE","The first 48 hours define every project.","What happens before the first sketch determines everything that comes after.","Need a process that protects your investment? DM me.",["Kickoff call within 48 hours of agreement","Mood reference exercise before any sketching","Agreed milestones in writing. Always."],"The projects that go wrong usually have one thing in common: no clear agreement before work began. DM me. #ClientOnboarding #MANNORR"],
+["May 15","Fri","PROCESS","A moodboard is not a Pinterest board.","It's a visual argument. Every reference earns its place.","Want a design direction that's right before we start? DM me.",["01 BRIEF: define the visual problem","02 MOODBOARD: make the visual argument","03 SYSTEM: build with full confidence","04 DELIVER: no surprises at the end"],"I spend more time on the moodboard stage than most designers spend on the whole project. Direction right = everything easier. DM me. #BehindTheWork #MANNORR"],
+["May 16","Sat","QUOTE","Build the brand. Build the system.","One without the other is incomplete.","Let's build both. DM me.",[],"A brand without a system breaks down. A system without a brand has no soul. You need both. #BrandSystems #MANNORR #DesignPhilosophy"],
+["May 17","Sun","TIP","One broken icon breaks the whole system.","Icon design is consistency at the smallest scale.","Need a design system that holds at every size? DM me.",["Consistent stroke weight across every icon","Identical corner radius throughout the set","Optical sizing, not just mathematical sizing"],"Design systems live or die at the detail level. One icon with different stroke weight makes the whole set feel amateur. #IconDesign #DesignSystems #MANNORR"],
+["May 18","Mon","ADVICE","The 60% deposit is not about distrust.","It's about commitment. From both sides.","Ready to work seriously? DM me.",["60% upfront secures your time on the project","Signals the client is ready and committed","Protects both parties from scope drift"],"I've never had a project go sideways when there was a deposit and a clear scope. Structure protects the work. DM me to start. #FreelanceBusiness #MANNORR #DesignBusiness"],
+["May 19","Tue","SPOTLIGHT","Naming is design. Full stop.","The right brand name creates a constraint that makes every design decision easier.","Need a brand name and identity that work together? DM me.",["Brand naming with strategic rationale included","Full identity system built around the name","Type, colour, and mark: all in harmony"],"The brands that feel inevitable had a name and a visual system designed to work together from the start. DM me. #BrandNaming #PortfolioSpotlight #MANNORR"],
+["May 20","Wed","TIP","Templates, not one-offs.","The designers who produce the most aren't working faster. They're working smarter.","Need a social media system that actually scales? DM me.",["One master template per format, not per post","Swap the content, never rebuild the structure","Batch export: a week's content in one session"],"If you're rebuilding from scratch for every post, you're spending creative energy on logistics. Build the template once. #SocialMediaDesign #MANNORR #DesignSystems"],
+["May 21","Thu","ADVICE","Feedback is not the same as a revision.","Confusing them is the most expensive mistake in any design project.","Need a client process that keeps projects on track? DM me.",["Feedback is strategic direction from the client","Revision is execution of agreed direction","Every response in writing. No verbal exceptions."],"When a client says 'I don't love it', that's feedback. 'Make the logo bigger' is a revision. I teach clients this on day one. DM me. #ClientWork #MANNORR #FreelanceTips"],
+["May 22","Fri","PROCESS","Figma. Adobe. AI. HTML. One workflow.","Every tool has a specific job. Knowing which to use is half the skill.","Want a designer who works at the intersection? DM me.",["01 BRIEF: strategy drives the tool choice","02 FIGMA: systems and components","03 ADOBE: production and final output","04 HTML/CSS: prototype the real thing"],"The best designers aren't the ones with the most tools. They know exactly which tool solves which problem. DM me. #BehindTheWork #MANNORR #DesignTools"],
+["May 23","Sat","QUOTE","The work needs to do something.","Beautiful and useless is not a compliment.","Work with a designer who builds for outcomes. DM me.",[],"Strategy without aesthetics is invisible. Aesthetics without strategy is decoration. I build both. #DesignThinking #BrandStrategy #MANNORR"],
+["May 24","Sun","TIP","Motion is the next layer of brand identity.","Static brands are increasingly invisible on modern platforms.","Need a brand built for motion? DM me.",["Duration: 200 to 400ms. The professional range.","Ease-out for entrances, ease-in for exits","Never linear. It feels mechanical, not crafted."],"The brands that feel alive on social have motion built into their system, not added as an afterthought. DM me. #MotionDesign #BrandIdentity #MANNORR"],
+["May 25","Mon","ADVICE","Growth without burnout is a systems problem.","Not a willpower problem.","Need a studio setup that actually scales? DM me.",["Batch production work, block time not tasks","Decline exposure-only projects without hesitation","Build a system for every repeatable task"],"The most productive creatives I know aren't working harder. They've removed every decision that doesn't require them specifically. DM me. #CreativeLife #MANNORR #DesignBusiness"],
+["May 26","Tue","SPOTLIGHT","A campaign is a visual ecosystem.","Key visual, format adaptations, motion assets, social cuts. All coherent everywhere.","Need a campaign that works across every platform? DM me.",["One strong key visual concept drives everything","Adapted for landscape, square, story, and banner","Coherent across every single touchpoint"],"The campaigns that feel effortless are built on one strong concept applied systematically. DM me. #CampaignDesign #MANNORR #PortfolioSpotlight"],
+["May 27","Wed","TIP","Print and digital aren't that different.","Except for everything that matters.","Need design that works in both worlds? DM me.",["Print: CMYK, bleed, 300dpi, physical finish","Digital: RGB, interactive states, dark mode ready","The grid logic is constant. Everything else changes."],"The grid is universal. The production specs are entirely different. I design for both. DM me. #PrintDesign #DigitalDesign #MANNORR"],
+["May 28","Thu","ADVICE","Niche is not a limitation. It's pricing power.","Generalists compete on price. Specialists compete on expertise.","Ready to own your niche? DM me.",["Specialists command significantly higher rates","A clear niche makes you easier to recommend","Expertise beats availability. Every time."],"The moment you try to design for everyone, you design for no one. Find your lane. Deepen your expertise. Charge accordingly. DM me. #FreelanceTips #MANNORR #DesignBusiness"],
+["May 29","Fri","PROCESS","8 years. This is what I know.","Speed comes from systems. Confidence comes from clarity. Results from understanding the problem.","Ready to work with someone who's figured it out? DM me.",["01 SYSTEMS: eliminate all wasted effort","02 CLARITY: the brief is everything","03 QUALITY: understanding beats raw talent","04 DELIVERY: on time, on brand, every time"],"The most experienced designers I respect all share one trait: they never skip the brief. Everything follows from that. DM me. #BehindTheWork #MANNORR #CreativeDirection"],
+["May 30","Sat","QUOTE","Let's create something extraordinary.","Every brief is an invitation. Every project is a chance to build something that lasts.","I'm ready when you are. DM me.",[],"This is the invitation. Show up with a brief and I'll show up with a system. #CreativeDirection #MANNORR #BrandDesign"],
+["May 31","Sun","TIP","Your social media is your portfolio.","Every post is a proof of concept for what you can do for a client.","Need content that attracts the right clients? DM me.",["Post with the craft you bring to client work","Consistency of style signals professional reliability","Your captions are your voice. Use them."],"The clients who DM me have almost always been following for a while. Social media is the longest sales cycle and the most powerful one. #PersonalBrand #MANNORR #ContentStrategy"]
+];
+
+var THEMES=[
+  {id:'dark',   label:'Dark',   bg:'#0a0a0a',fg:'#e8e4df',accent:'#c8ff00',  rule:'rgba(200,255,0,0.15)'},
+  {id:'light',  label:'Light',  bg:'#f5f2ed',fg:'#1a1a1a',accent:'#5a00e6',  rule:'rgba(90,0,230,0.2)'},
+  {id:'volt',   label:'Volt',   bg:'#c8ff00',fg:'#0a0a0a',accent:'#0a0a0a',  rule:'rgba(0,0,0,0.2)'},
+  {id:'violet', label:'Violet', bg:'#5a00e6',fg:'#f0edff',accent:'#c8ff00',  rule:'rgba(200,255,0,0.2)'},
+  {id:'bw',     label:'B/W',    bg:'#000000',fg:'#ffffff',accent:'#ffffff',   rule:'rgba(255,255,255,0.15)'},
+  {id:'wb',     label:'W/B',    bg:'#ffffff',fg:'#000000',accent:'#000000',   rule:'rgba(0,0,0,0.15)'},
+  {id:'mid',    label:'Mid',    bg:'#0d0d1a',fg:'#c8d0ff',accent:'#7b61ff',  rule:'rgba(123,97,255,0.2)'},
+  {id:'forest', label:'Forest', bg:'#0e1a12',fg:'#d4edd8',accent:'#3ddc84',  rule:'rgba(61,220,132,0.2)'},
+  {id:'ember',  label:'Ember',  bg:'#1a0a00',fg:'#f5dcc8',accent:'#ff6b2b',  rule:'rgba(255,107,43,0.2)'},
+  {id:'slate',  label:'Slate',  bg:'#1a1f2e',fg:'#c8d0e0',accent:'#4fc3f7',  rule:'rgba(79,195,247,0.2)'},
+  {id:'rose',   label:'Rose',   bg:'#1a0010',fg:'#ffe0f0',accent:'#ff4da6',  rule:'rgba(255,77,166,0.2)'},
+  {id:'sand',   label:'Sand',   bg:'#f0e8d8',fg:'#2a1f0a',accent:'#c87000',  rule:'rgba(200,112,0,0.2)'},
+];
+
+var currentPost=0,currentTheme=THEMES[0],filteredPosts=POSTS.slice();
+var activeFilter='all',activeMonth='all',searchTerm='';
+
+function applyFilters(){
+  filteredPosts=POSTS.filter(function(p){
+    var mp=activeFilter==='all'||p[2]===activeFilter;
+    var mm=activeMonth==='all'||p[0].indexOf(activeMonth)===0;
+    var ms=!searchTerm||p[3].toLowerCase().indexOf(searchTerm.toLowerCase())>=0;
+    return mp&&mm&&ms;
+  });
+  document.getElementById('navCount').textContent=filteredPosts.length+' posts';
+  renderGrid();
+}
+
+function renderGrid(){
+  var grid=document.getElementById('postGrid');
+  grid.innerHTML='';
+  filteredPosts.forEach(function(post){
+    var card=document.createElement('div');
+    card.className='post-card';
+    var idx=POSTS.indexOf(post);
+    card.onclick=function(){openModal(idx);};
+    var thumbWrap=document.createElement('div');
+    thumbWrap.className='post-thumb';
+    var scale=210/1080;
+    var ih=Math.round(1350*scale);
+    thumbWrap.style.height=ih+'px';
+    var inner=document.createElement('div');
+    inner.style.cssText='transform:scale('+scale+');transform-origin:top left;width:1080px;height:1350px;flex-shrink:0;display:block;';
+    inner.innerHTML=buildDesign(post,THEMES[0]);
+    thumbWrap.appendChild(inner);
+    var info=document.createElement('div');
+    info.className='post-card-info';
+    var typeLabel={TIP:'Design Tip',ADVICE:'Brand Advice',SPOTLIGHT:'Portfolio',PROCESS:'Process',QUOTE:'Quote'};
+    info.innerHTML='<div class="post-card-date">'+post[0]+' &middot; '+post[1]+'</div><div class="post-card-topic">'+post[3]+'</div><div class="post-card-meta"><span class="pct">'+(typeLabel[post[2]]||post[2])+'</span></div>';
+    card.appendChild(thumbWrap);
+    card.appendChild(info);
+    grid.appendChild(card);
+  });
+}
+
+/* ── DESIGN BUILDER ── */
+function buildDesign(post,th){
+  var type=post[2];
+  if(type==='QUOTE')   return dQuote(post,th);
+  if(type==='TIP')     return dTip(post,th);
+  if(type==='ADVICE')  return dAdvice(post,th);
+  if(type==='SPOTLIGHT')return dSpotlight(post,th);
+  if(type==='PROCESS') return dProcess(post,th);
+  return dTip(post,th);
+}
+
+function baseDiv(th,content){
+  return '<div style="width:1080px;height:1350px;position:relative;overflow:hidden;background:'+th.bg+';color:'+th.fg+';font-family:Syne,sans-serif;-webkit-font-smoothing:antialiased;">'+content+'</div>';
+}
+
+/* shared footer bar */
+function footer(th){
+  return '<div style="position:absolute;bottom:0;left:0;right:0;height:120px;display:flex;align-items:center;justify-content:space-between;padding:0 80px;border-top:1px solid '+th.rule+';">'
+    +'<div style="font-family:Syne,sans-serif;font-size:28px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:'+th.fg+';">MANNORR<span style="display:inline-block;width:8px;height:8px;background:'+th.accent+';border-radius:50%;margin-left:4px;vertical-align:middle;"></span></div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:18px;color:'+th.fg+';opacity:.38;letter-spacing:.08em;">@mannorr_design</div>'
+    +'</div>';
+}
+
+/* top bar — category label + date */
+function topBar(th,label,date){
+  return '<div style="position:absolute;top:0;left:0;right:0;height:96px;display:flex;align-items:center;justify-content:space-between;padding:0 80px;border-bottom:1px solid '+th.rule+';">'
+    +'<div style="font-family:DM Mono,monospace;font-size:18px;text-transform:uppercase;letter-spacing:.28em;color:'+th.accent+';">'+label+'</div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:18px;text-transform:uppercase;letter-spacing:.16em;color:'+th.fg+';opacity:.38;">'+date+'</div>'
+    +'</div>';
+}
+
+/* ── QUOTE layout ── */
+function dQuote(post,th){
+  var topic=post[3];
+  var cta=post[5];
+  var fs=topic.length<44?86:topic.length<70?70:56;
+  return baseDiv(th,
+    topBar(th,'QUOTE',post[0])
+    +'<div style="position:absolute;top:-60px;left:48px;font-family:Instrument Serif,serif;font-size:600px;line-height:.72;font-style:italic;color:'+th.accent+';opacity:.09;pointer-events:none;user-select:none;">“</div>'
+    +'<div style="position:absolute;top:96px;bottom:120px;left:80px;right:80px;display:flex;flex-direction:column;justify-content:center;gap:0;">'
+    +'<div style="font-family:Instrument Serif,serif;font-style:italic;font-size:'+fs+'px;line-height:1.22;color:'+th.fg+';margin-bottom:56px;">“'+topic+'”</div>'
+    +'<div style="width:72px;height:3px;background:'+th.accent+';margin-bottom:40px;"></div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:20px;text-transform:uppercase;letter-spacing:.28em;color:'+th.fg+';opacity:.45;">— MANNORR</div>'
+    +'<div style="margin-top:48px;font-family:DM Mono,monospace;font-size:22px;color:'+th.accent+';letter-spacing:.08em;">'+cta+'</div>'
+    +'</div>'
+    +footer(th)
+  );
+}
+
+/* ── TIP layout ── */
+function dTip(post,th){
+  var headline=post[3];
+  var sub=post[4];
+  var cta=post[5];
+  var pts=post[6];
+  var hfs=headline.length>40?64:headline.length>28?76:90;
+  return baseDiv(th,
+    topBar(th,'DESIGN TIP',post[0])
+    +'<div style="position:absolute;top:96px;left:80px;right:80px;padding-top:64px;">'
+    +'<div style="font-family:Syne,sans-serif;font-weight:800;font-size:'+hfs+'px;letter-spacing:-.035em;text-transform:uppercase;line-height:.95;color:'+th.fg+';margin-bottom:32px;">'+headline+'</div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:26px;line-height:1.6;color:'+th.fg+';opacity:.6;max-width:820px;">'+sub+'</div>'
+    +'</div>'
+    +'<div style="position:absolute;top:540px;left:80px;right:80px;">'
+    +'<div style="width:64px;height:2px;background:'+th.accent+';margin-bottom:56px;"></div>'
+    +pts.map(function(p,i){
+      return '<div style="display:flex;gap:28px;align-items:flex-start;margin-bottom:48px;">'
+        +'<div style="font-family:DM Mono,monospace;font-size:16px;color:'+th.accent+';font-weight:500;min-width:32px;padding-top:6px;letter-spacing:.1em;">0'+(i+1)+'</div>'
+        +'<div style="font-family:DM Mono,monospace;font-size:26px;line-height:1.55;color:'+th.fg+';opacity:.88;">'+p+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +'<div style="position:absolute;bottom:128px;left:80px;right:80px;">'
+    +'<div style="font-family:DM Mono,monospace;font-size:22px;color:'+th.accent+';letter-spacing:.06em;">'+cta+'</div>'
+    +'</div>'
+    +footer(th)
+  );
+}
+
+/* ── ADVICE layout ── */
+function dAdvice(post,th){
+  var headline=post[3];
+  var sub=post[4];
+  var cta=post[5];
+  var pts=post[6];
+  var hfs=headline.length>46?58:headline.length>32?68:80;
+  return baseDiv(th,
+    '<div style="position:absolute;top:0;left:0;width:6px;height:100%;background:'+th.accent+';"></div>'
+    +topBar(th,'BRAND ADVICE',post[0])
+    +'<div style="position:absolute;top:96px;left:86px;right:80px;padding-top:64px;">'
+    +'<div style="font-family:Syne,sans-serif;font-weight:800;font-size:'+hfs+'px;letter-spacing:-.03em;text-transform:uppercase;line-height:.96;color:'+th.fg+';margin-bottom:28px;">'+headline+'</div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:24px;line-height:1.65;color:'+th.fg+';opacity:.58;max-width:820px;">'+sub+'</div>'
+    +'</div>'
+    +'<div style="position:absolute;top:560px;left:86px;right:80px;">'
+    +'<div style="width:64px;height:2px;background:'+th.accent+';margin-bottom:56px;"></div>'
+    +pts.map(function(p){
+      return '<div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:44px;padding-bottom:44px;border-bottom:1px solid '+th.rule+';">'
+        +'<div style="width:10px;height:10px;background:'+th.accent+';border-radius:50%;margin-top:10px;flex-shrink:0;"></div>'
+        +'<div style="font-family:DM Mono,monospace;font-size:26px;line-height:1.6;color:'+th.fg+';opacity:.88;">'+p+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +'<div style="position:absolute;bottom:128px;left:86px;right:80px;">'
+    +'<div style="font-family:DM Mono,monospace;font-size:22px;color:'+th.accent+';letter-spacing:.06em;">'+cta+'</div>'
+    +'</div>'
+    +footer(th)
+  );
+}
+
+/* ── SPOTLIGHT layout ── */
+function dSpotlight(post,th){
+  var headline=post[3];
+  var sub=post[4];
+  var cta=post[5];
+  var pts=post[6];
+  var parts=headline.split('.');
+  var stat=parts[0]?parts[0].trim():'';
+  var context=parts[1]?parts[1].trim():sub;
+  var hfs=stat.length>30?68:stat.length>20?80:96;
+  return baseDiv(th,
+    topBar(th,'PORTFOLIO SPOTLIGHT',post[0])
+    +'<div style="position:absolute;top:96px;left:80px;right:80px;padding-top:64px;">'
+    +'<div style="font-family:Syne,sans-serif;font-weight:800;font-size:'+hfs+'px;letter-spacing:-.04em;line-height:.94;color:'+th.accent+';text-transform:uppercase;margin-bottom:28px;">'+stat+'</div>'
+    +'<div style="font-family:Instrument Serif,serif;font-style:italic;font-size:44px;line-height:1.2;color:'+th.fg+';opacity:.7;margin-bottom:12px;">'+sub+'</div>'
+    +'</div>'
+    +'<div style="position:absolute;top:520px;left:80px;right:80px;">'
+    +'<div style="width:64px;height:2px;background:'+th.accent+';margin-bottom:56px;"></div>'
+    +pts.map(function(p,i){
+      return '<div style="display:flex;gap:28px;align-items:flex-start;margin-bottom:48px;">'
+        +'<div style="font-family:DM Mono,monospace;font-size:16px;color:'+th.accent+';font-weight:500;min-width:32px;padding-top:6px;letter-spacing:.1em;">0'+(i+1)+'</div>'
+        +'<div style="font-family:DM Mono,monospace;font-size:26px;line-height:1.55;color:'+th.fg+';opacity:.88;">'+p+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +'<div style="position:absolute;bottom:128px;left:80px;right:80px;">'
+    +'<div style="font-family:DM Mono,monospace;font-size:22px;color:'+th.accent+';letter-spacing:.06em;">'+cta+'</div>'
+    +'</div>'
+    +footer(th)
+  );
+}
+
+/* ── PROCESS layout ── */
+function dProcess(post,th){
+  var headline=post[3];
+  var sub=post[4];
+  var cta=post[5];
+  var steps=post[6];
+  var hfs=headline.length>36?64:headline.length>24?76:88;
+  return baseDiv(th,
+    topBar(th,'BEHIND THE WORK',post[0])
+    +'<div style="position:absolute;top:96px;left:80px;right:80px;padding-top:56px;">'
+    +'<div style="font-family:Syne,sans-serif;font-weight:800;font-size:'+hfs+'px;letter-spacing:-.035em;text-transform:uppercase;line-height:.95;color:'+th.fg+';margin-bottom:24px;">'+headline+'</div>'
+    +'<div style="font-family:DM Mono,monospace;font-size:24px;line-height:1.6;color:'+th.fg+';opacity:.56;max-width:820px;">'+sub+'</div>'
+    +'</div>'
+    +'<div style="position:absolute;top:480px;left:80px;right:80px;">'
+    +'<div style="width:64px;height:2px;background:'+th.accent+';margin-bottom:52px;"></div>'
+    +steps.map(function(s,i){
+      var parts=s.split(':');
+      var num=parts[0]?parts[0].trim():'';
+      var desc=parts[1]?parts[1].trim():s;
+      return '<div style="display:flex;gap:32px;align-items:center;margin-bottom:40px;padding-bottom:40px;'+(i<steps.length-1?'border-bottom:1px solid '+th.rule:'')+';"><div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:'+th.accent+';line-height:1;min-width:60px;">'+num.slice(0,2)+'</div><div><div style="font-family:Syne,sans-serif;font-size:28px;font-weight:700;color:'+th.fg+';line-height:1.1;letter-spacing:-.01em;">'+num.slice(3).trim()+'</div><div style="font-family:DM Mono,monospace;font-size:20px;color:'+th.fg+';opacity:.48;margin-top:4px;">'+desc+'</div></div></div>';
+    }).join('')
+    +'</div>'
+    +'<div style="position:absolute;bottom:128px;left:80px;right:80px;">'
+    +'<div style="font-family:DM Mono,monospace;font-size:22px;color:'+th.accent+';letter-spacing:.06em;">'+cta+'</div>'
+    +'</div>'
+    +footer(th)
+  );
+}
+
+/* ── MODAL ── */
+function openModal(idx){currentPost=idx;currentTheme=THEMES[0];showModal();}
+function showModal(){
+  var post=POSTS[currentPost];
+  var typeLabel={TIP:'Design Tip',ADVICE:'Brand Advice',SPOTLIGHT:'Portfolio Spotlight',PROCESS:'Behind the Work',QUOTE:'Quote'};
+  document.getElementById('mDate').textContent=post[0]+' · '+post[1];
+  document.getElementById('mTopic').textContent=post[3];
+  document.getElementById('mPillar').textContent=(typeLabel[post[2]]||post[2])+' · '+post[4];
+  document.getElementById('mCaption').textContent=post[7];
+  var tg=document.getElementById('themeGrid');
+  tg.innerHTML='';
+  THEMES.forEach(function(th){
+    var btn=document.createElement('button');
+    btn.className='theme-btn'+(th.id===currentTheme.id?' active':'');
+    btn.title=th.label;
+    btn.style.cssText='background:'+th.bg+';border-color:'+(th.id===currentTheme.id?'#c8ff00':'transparent')+';';
+    btn.innerHTML='<span style="color:'+th.fg+';">'+th.label+'</span>';
+    btn.onclick=function(){currentTheme=th;showModal();};
+    tg.appendChild(btn);
+  });
+  renderPreview();
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function renderPreview(){
+  var post=POSTS[currentPost];
+  var c=document.getElementById('previewContainer');
+  c.innerHTML='';
+  var scale=340/1080;
+  var h=Math.round(1350*scale);
+  c.style.height=h+'px';
+  var ww=document.createElement('div');
+  ww.style.cssText='position:relative;width:100%;height:'+h+'px;overflow:hidden;border-radius:16px;';
+  var inner=document.createElement('div');
+  inner.style.cssText='transform:scale('+scale+');transform-origin:top left;width:1080px;height:1350px;display:block;';
+  inner.innerHTML=buildDesign(post,currentTheme);
+  ww.appendChild(inner);
+  c.appendChild(ww);
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
+function navPost(d){var n=currentPost+d;if(n>=0&&n<POSTS.length){currentPost=n;showModal();}}
+
+/* ── DOWNLOAD ── */
+async function downloadPost(){
+  var btn=document.getElementById('dlBtn');
+  btn.disabled=true;btn.textContent='Rendering…';
+  var post=POSTS[currentPost];
+  var off=document.createElement('div');
+  off.style.cssText='position:fixed;left:-9999px;top:0;width:1080px;height:1350px;overflow:hidden;z-index:-1;';
+  off.innerHTML=buildDesign(post,currentTheme);
+  document.body.appendChild(off);
+  await document.fonts.ready;
+  await new Promise(function(r){setTimeout(r,500);});
+  try{
+    var cv=await html2canvas(off,{width:1080,height:1350,scale:1,useCORS:true,allowTaint:true,backgroundColor:currentTheme.bg,logging:false});
+    var fc=document.createElement('canvas');
+    fc.width=1080;fc.height=1350;
+    var ctx=fc.getContext('2d');
+    /* white rounded outer frame */
+    var r=44,b=16,ir=30;
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(1080-r,0);ctx.quadraticCurveTo(1080,0,1080,r);ctx.lineTo(1080,1350-r);ctx.quadraticCurveTo(1080,1350,1080-r,1350);ctx.lineTo(r,1350);ctx.quadraticCurveTo(0,1350,0,1350-r);ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();ctx.fill();
+    /* clip inner */
+    ctx.save();ctx.beginPath();ctx.moveTo(b+ir,b);ctx.lineTo(1080-b-ir,b);ctx.quadraticCurveTo(1080-b,b,1080-b,b+ir);ctx.lineTo(1080-b,1350-b-ir);ctx.quadraticCurveTo(1080-b,1350-b,1080-b-ir,1350-b);ctx.lineTo(b+ir,1350-b);ctx.quadraticCurveTo(b,1350-b,b,1350-b-ir);ctx.lineTo(b,b+ir);ctx.quadraticCurveTo(b,b,b+ir,b);ctx.closePath();ctx.clip();
+    ctx.drawImage(cv,b,b,1080-b*2,1350-b*2);ctx.restore();
+    var a=document.createElement('a');
+    var slug=post[3].toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,34);
+    a.download='MANNORR-'+post[0].replace(' ','')+'-'+slug+'-'+currentTheme.id+'.jpg';
+    a.href=fc.toDataURL('image/jpeg',0.95);a.click();
+  }catch(e){alert('Render error: '+e.message);}
+  finally{document.body.removeChild(off);btn.disabled=false;btn.innerHTML='&darr; Download 1080 &times; 1350 JPEG';}
+}
+
+/* ── EVENTS ── */
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('pillarFilters').addEventListener('click',function(e){
+    var b=e.target.closest('.pill');if(!b)return;
+    document.querySelectorAll('#pillarFilters .pill').forEach(function(p){p.classList.remove('active');});
+    b.classList.add('active');activeFilter=b.getAttribute('data-f');applyFilters();
+  });
+  document.getElementById('monthFilters').addEventListener('click',function(e){
+    var b=e.target.closest('.pill');if(!b)return;
+    document.querySelectorAll('#monthFilters .pill').forEach(function(p){p.classList.remove('active');});
+    b.classList.add('active');activeMonth=b.getAttribute('data-m');applyFilters();
+  });
+  document.getElementById('searchInput').addEventListener('input',function(e){searchTerm=e.target.value;applyFilters();});
+  document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape')closeModal();
+    var m=document.getElementById('modal');
+    if(m.classList.contains('open')){
+      if(e.key==='ArrowRight')navPost(1);
+      if(e.key==='ArrowLeft')navPost(-1);
+    }
+  });
+});
+</script>
+</body>
+</html>
